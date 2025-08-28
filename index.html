@@ -20,6 +20,134 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        /* Tema Escuro */
+        body.dark-theme {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        }
+
+        body.dark-theme .container {
+            background: rgba(15, 23, 42, 0.95);
+        }
+
+        body.dark-theme .main-content {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .sidebar {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        }
+
+        body.dark-theme .login-title,
+        body.dark-theme .page-title,
+        body.dark-theme .modal-title {
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .login-subtitle {
+            color: #94a3b8;
+        }
+
+        body.dark-theme .password-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .password-card:hover {
+            background: #334155;
+        }
+
+        body.dark-theme .site-name {
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .info-value {
+            color: #cbd5e1;
+        }
+
+        body.dark-theme .info-label {
+            color: #94a3b8;
+        }
+
+        body.dark-theme .password-value {
+            background: #334155;
+            border: 1px dashed #475569;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .action-btn:hover {
+            background: #475569;
+        }
+
+        body.dark-theme .modal-content {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .form-input {
+            background: #334155;
+            border: 2px solid #475569;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .form-input::placeholder {
+            color: #64748b;
+        }
+
+        body.dark-theme .form-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        body.dark-theme .form-label {
+            color: #cbd5e1;
+        }
+
+        body.dark-theme .search-box {
+            background: #334155;
+            border: 2px solid #475569;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .search-box::placeholder {
+            color: #64748b;
+        }
+
+        body.dark-theme .search-box:focus {
+            border-color: #3b82f6;
+        }
+
+        body.dark-theme .generate-controls {
+            background: #334155;
+        }
+
+        body.dark-theme .btn-secondary {
+            background: #475569;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .btn-secondary:hover {
+            background: #64748b;
+        }
+
+        body.dark-theme .close-btn {
+            color: #94a3b8;
+        }
+
+        body.dark-theme .slider {
+            background: #475569;
+        }
+
+        body.dark-theme .slider::-webkit-slider-thumb {
+            background: #3b82f6;
+        }
+
+        body.dark-theme .checkbox-item label {
+            color: #cbd5e1;
         }
 
         .container {
@@ -1369,11 +1497,32 @@
             localStorage.setItem('securepass_autologout', autoLogout);
             localStorage.setItem('securepass_autobackup', autoBackup);
             
+            // Aplicar tema imediatamente
+            applyTheme(theme);
+            
             // Reiniciar timer com nova configuração
             startAutoLogoutTimer();
             
             showToast('Configurações salvas! ⚙️');
         });
+
+        // Aplicar tema
+        function applyTheme(theme) {
+            const body = document.body;
+            
+            if (theme === 'dark') {
+                body.classList.add('dark-theme');
+            } else if (theme === 'light') {
+                body.classList.remove('dark-theme');
+            } else if (theme === 'auto') {
+                // Auto: detecta preferência do sistema
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    body.classList.add('dark-theme');
+                } else {
+                    body.classList.remove('dark-theme');
+                }
+            }
+        }
 
         // Carregar configurações
         function loadSettings() {
@@ -1384,6 +1533,19 @@
             document.getElementById('themeSelect').value = savedTheme;
             document.getElementById('autoLogout').value = savedAutoLogout;
             document.getElementById('autoBackup').checked = savedAutoBackup;
+            
+            // Aplicar tema salvo
+            applyTheme(savedTheme);
+        }
+
+        // Detectar mudanças de tema do sistema (modo auto)
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                const currentTheme = localStorage.getItem('securepass_theme');
+                if (currentTheme === 'auto') {
+                    applyTheme('auto');
+                }
+            });
         }
 
         // Atualizar estatísticas
@@ -1497,6 +1659,9 @@
 
         // Inicialização
         window.addEventListener('load', () => {
+            // Carrega configurações primeiro (incluindo tema)
+            loadSettings();
+            
             // Verifica sessão salva
             if (!checkSavedSession()) {
                 // Inicializa Google Sign-In apenas se necessário
@@ -1507,8 +1672,6 @@
                     });
                 }
             }
-            
-            loadSettings();
         });
     </script>
 </body>
