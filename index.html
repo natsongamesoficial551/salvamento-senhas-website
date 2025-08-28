@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecurePass - Seu Gerenciador de Senhas</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            width: 90%;
+            max-width: 1200px;
+            min-height: 600px;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 300px;
+            padding: 30px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .logo::before {
+            content: "🔒";
+            margin-right: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            background: rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .nav-item::before {
+            margin-right: 15px;
+            font-size: 18px;
+        }
+
+        .nav-passwords::before { content: "🗝️"; }
+        .nav-generator::before { content: "⚡"; }
+        .nav-settings::before { content: "⚙️"; }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            background: white;
+        }
+
+        .login-screen {
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+            padding-top: 100px;
+        }
+
+        .login-title {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .login-subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .google-login-btn {
+            margin: 0 auto;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .password-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .password-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .password-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .site-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .action-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .card-info {
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .password-value {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px dashed #ddd;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .search-box {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            border: 2px solid #f0f0f0;
+            border-radius: 25px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stats-label {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .hidden { display: none !important; }
+        .show { display: flex !important; }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 20px;
+            }
+            
+            .nav-item {
+                margin: 0 10px;
+                padding: 10px;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .password-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        .strength-indicator {
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .strength-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .strength-weak { background: #ff4757; width: 25%; }
+        .strength-medium { background: #ffa502; width: 50%; }
+        .strength-good { background: #2ed573; width: 75%; }
+        .strength-strong { background: #00d2d3; width: 100%; }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .generate-controls {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .slider-container {
+            margin: 15px 0;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2ed573;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            z-index: 9999;
+            transform: translateX(300px);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .export-import {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Tela de Login -->
+        <div id="loginScreen" class="main-content">
+            <div class="login-screen">
+                <h1 class="login-title">SecurePass</h1>
+                <p class="login-subtitle">Seu gerenciador de senhas local e seguro</p>
+                <div id="g_id_onload"
+                     data-client_id="1088181975050-ki1pknaemctiac1gc80s8bt2nu5gub10.apps.googleusercontent.com"
+                     data-context="signin"
+                     data-ux_mode="popup"
+                     data-callback="handleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-shape="rectangular"
+                     data-theme="outline"
+                     data-text="signin_with"
+                     data-size="large"
+                     data-logo_alignment="left">
+                </div>
+            </div>
+        </div>
+
+        <!-- Interface Principal -->
+        <div id="mainInterface" class="hidden">
+            <div class="sidebar">
+                <div class="logo">SecurePass</div>
+                <div class="subtitle">Salvo localmente no seu dispositivo</div>
+                
+                <div id="userInfo" class="user-info">
+                    <div class="user-avatar" id="userAvatar">👤</div>
+                    <div id="userName">Usuário</div>
+                    <div id="userEmail">email@exemplo.com</div>
+                </div>
+
+                <nav>
+                    <div class="nav-item nav-passwords active" data-page="passwords">
+                        Minhas Senhas
+                    </div>
+                    <div class="nav-item nav-generator" data-page="generator">
+                        Gerador de Senhas
+                    </div>
+                    <div class="nav-item nav-settings" data-page="settings">
+                        Configurações
+                    </div>
+                </nav>
+
+                <div style="margin-top: auto;">
+                    <button id="logoutBtn" class="btn btn-secondary" style="width: 100%;">
+                        Sair
+                    </button>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <!-- Página de Senhas -->
+                <div id="passwordsPage" class="page">
+                    <div class="content-header">
+                        <h2 class="page-title">Minhas Senhas</h2>
+                        <button id="addPasswordBtn" class="add-btn">+ Adicionar</button>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <div class="stats-number" id="passwordCount">0</div>
+                        <div class="stats-label">Senhas Salvas Localmente</div>
+                    </div>
+
+                    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Buscar senhas...">
+                    
+                    <div id="passwordGrid" class="password-grid">
+                        <!-- Cards de senha serão inseridos aqui -->
+                    </div>
+                </div>
+
+                <!-- Página do Gerador -->
+                <div id="generatorPage" class="page hidden">
+                    <div class="content-header">
+                        <h2 class="page-title">Gerador de Senhas</h2>
+                    </div>
+                    
+                    <div class="generate-controls">
+                        <div class="form-group">
+                            <label class="form-label">Tamanho da senha: <span id="lengthValue">16</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="passwordLength" min="4" max="64" value="16" class="slider">
+                            </div>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="includeUppercase" checked>
+                                <label>Maiúsculas (A-Z)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="includeLowercase" checked>
+                                <label>Minúsculas (a-z)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="includeNumbers" checked>
+                                <label>Números (0-9)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="includeSymbols" checked>
+                                <label>Símbolos (!@#$%)</label>
+                            </div>
+                        </div>
+
+                        <button id="generateBtn" class="btn btn-primary">🎲 Gerar Senha</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Senha gerada:</label>
+                        <input type="text" id="generatedPassword" class="form-input" readonly placeholder="Clique em gerar para criar uma senha...">
+                        <div class="strength-indicator">
+                            <div id="strengthBar" class="strength-bar"></div>
+                        </div>
+                        <small id="strengthText">Clique em gerar para ver a força da senha</small>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; margin-top: 20px;">
+                        <button id="copyGeneratedBtn" class="btn btn-secondary">📋 Copiar</button>
+                        <button id="useGeneratedBtn" class="btn btn-primary">✅ Usar esta senha</button>
+                    </div>
+                </div>
+
+                <!-- Página de Configurações -->
+                <div id="settingsPage" class="page hidden">
+                    <div class="content-header">
+                        <h2 class="page-title">Configurações</h2>
+                    </div>
+                    
+                    <div style="max-width: 500px;">
+                        <div class="form-group">
+                            <label class="form-label">🌙 Tema:</label>
+                            <select id="themeSelect" class="form-input">
+                                <option value="light">☀️ Claro</option>
+                                <option value="dark">🌙 Escuro</option>
+                                <option value="auto">🔄 Automático</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">🔐 Auto-logout (minutos):</label>
+                            <input type="number" id="autoLogout" class="form-input" value="60" min="5" max="480">
+                            <small>Entre 5 minutos e 8 horas</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">💾 Backup automático:</label>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="autoBackup" checked>
+                                <label>Fazer backup das senhas automaticamente</label>
+                            </div>
+                        </div>
+
+                        <button id="saveSettingsBtn" class="btn btn-primary">💾 Salvar Configurações</button>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid #f0f0f0;">
+
+                        <h3 style="margin-bottom: 20px; color: #333;">📤 Exportar/Importar Dados</h3>
+                        
+                        <div class="export-import">
+                            <button id="exportBtn" class="btn btn-secondary">📤 Exportar</button>
+                            <input type="file" id="importFile" accept=".json" style="display: none;">
+                            <button id="importBtn" class="btn btn-secondary">📥 Importar</button>
+                            <button id="clearAllBtn" class="btn" style="background: #ff4757; color: white;">🗑️ Limpar Tudo</button>
+                        </div>
+
+                        <div class="stats-card" style="margin-top: 20px;">
+                            <div style="font-size: 16px; margin-bottom: 10px;">📊 Estatísticas</div>
+                            <div>Senhas salvas: <span id="totalPasswords">0</span></div>
+                            <div>Última sincronização: <span id="lastSync">Nunca</span></div>
+                            <div>Espaço usado: <span id="storageUsed">0 KB</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar/Editar Senha -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn">&times;</button>
+            <h3 class="modal-title">Adicionar Nova Senha</h3>
+            <form id="passwordForm">
+                <div class="form-group">
+                    <label class="form-label">🏢 Nome do Site/Serviço:</label>
+                    <input type="text" id="siteName" class="form-input" required placeholder="Ex: Gmail, Facebook, Banco...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">👤 Email/Usuário:</label>
+                    <input type="text" id="siteEmail" class="form-input" required placeholder="Ex: usuario@email.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🔑 Senha:</label>
+                    <div style="position: relative;">
+                        <input type="password" id="sitePassword" class="form-input" required placeholder="Digite ou gere uma senha segura">
+                        <button type="button" id="togglePassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px;">👁️</button>
+                    </div>
+                    <button type="button" id="generateForForm" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">🎲 Gerar Senha Segura</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🌐 URL (opcional):</label>
+                    <input type="url" id="siteUrl" class="form-input" placeholder="https://exemplo.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📝 Notas (opcional):</label>
+                    <textarea id="siteNotes" class="form-input" rows="3" placeholder="Informações adicionais sobre esta conta..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Estado da aplicação
+        let currentUser = null;
+        let passwords = [];
+        let currentEditingId = null;
+        let autoLogoutTimer = null;
+
+        // Elementos DOM
+        const loginScreen = document.getElementById('loginScreen');
+        const mainInterface = document.getElementById('mainInterface');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userName = document.getElementById('userName');
+        const userEmail = document.getElementById('userEmail');
+        const userAvatar = document.getElementById('userAvatar');
+        const passwordGrid = document.getElementById('passwordGrid');
+        const passwordModal = document.getElementById('passwordModal');
+        const addPasswordBtn = document.getElementById('addPasswordBtn');
+        const passwordForm = document.getElementById('passwordForm');
+        const searchBox = document.getElementById('searchBox');
+        const passwordCount = document.getElementById('passwordCount');
+
+        // Navegação
+        const navItems = document.querySelectorAll('.nav-item');
+        const pages = document.querySelectorAll('.page');
+
+        // Funções de criptografia
+        function generateUserKey(userId) {
+            // Gera uma chave única para cada usuário
+            return CryptoJS.PBKDF2(userId + "SecurePass2024Local", userId, {
+                keySize: 256/32,
+                iterations: 5000
+            }).toString();
+        }
+
+        function encryptData(data, key) {
+            return CryptoJS.AES.encrypt(JSON.stringify(data), key).toString();
+        }
+
+        function decryptData(encryptedData, key) {
+            try {
+                const bytes = CryptoJS.AES.decrypt(encryptedData, key);
+                const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+                return JSON.parse(decrypted);
+            } catch (error) {
+                console.error('Erro na descriptografia:', error);
+                return null;
+            }
+        }
+
+        // Callback do Google Sign-In
+        function handleCredentialResponse(response) {
+            // Decodifica o JWT token
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            
+            currentUser = {
+                id: payload.sub,
+                name: payload.name,
+                email: payload.email,
+                picture: payload.picture
+            };
+
+            // Atualiza a interface
+            userName.textContent = currentUser.name;
+            userEmail.textContent = currentUser.email;
+            
+            if (currentUser.picture) {
+                userAvatar.innerHTML = `<img src="${currentUser.picture}" alt="Avatar">`;
+            }
+
+            // Mostra a interface principal
+            loginScreen.classList.add('hidden');
+            mainInterface.classList.remove('hidden');
+
+            // Carrega as senhas do usuário
+            loadPasswords();
+            
+            // Inicia o timer de auto-logout
+            startAutoLogoutTimer();
+
+            // Salva a sessão
+            saveSession();
+        }
+
+        // Verificar sessão salva
+        function checkSavedSession() {
+            const savedSession = localStorage.getItem('securepass_session');
+            if (savedSession) {
+                try {
+                    const session = JSON.parse(savedSession);
+                    const now = Date.now();
+                    
+                    // Verifica se a sessão não expirou (24 horas)
+                    if (now - session.timestamp < 24 * 60 * 60 * 1000) {
+                        currentUser = session.user;
+                        userName.textContent = currentUser.name;
+                        userEmail.textContent = currentUser.email;
+                        
+                        if (currentUser.picture) {
+                            userAvatar.innerHTML = `<img src="${currentUser.picture}" alt="Avatar">`;
+                        }
+
+                        loginScreen.classList.add('hidden');
+                        mainInterface.classList.remove('hidden');
+                        loadPasswords();
+                        startAutoLogoutTimer();
+                        return true;
+                    } else {
+                        // Sessão expirada
+                        localStorage.removeItem('securepass_session');
+                    }
+                } catch (error) {
+                    localStorage.removeItem('securepass_session');
+                }
+            }
+            return false;
+        }
+
+        // Salvar sessão
+        function saveSession() {
+            const session = {
+                user: currentUser,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('securepass_session', JSON.stringify(session));
+        }
+
+        // Auto-logout
+        function startAutoLogoutTimer() {
+            const autoLogoutMinutes = parseInt(localStorage.getItem('securepass_autologout') || '60');
+            
+            if (autoLogoutTimer) {
+                clearTimeout(autoLogoutTimer);
+            }
+            
+            autoLogoutTimer = setTimeout(() => {
+                logout();
+                showToast('Sessão expirada por inatividade', 'warning');
+            }, autoLogoutMinutes * 60 * 1000);
+        }
+
+        // Logout
+        function logout() {
+            currentUser = null;
+            passwords = [];
+            localStorage.removeItem('securepass_session');
+            
+            if (autoLogoutTimer) {
+                clearTimeout(autoLogoutTimer);
+            }
+            
+            loginScreen.classList.remove('hidden');
+            mainInterface.classList.add('hidden');
+            
+            // Recarrega a página para limpar o Google Sign-In
+            setTimeout(() => window.location.reload(), 100);
+        }
+
+        // Event Listeners
+        logoutBtn.addEventListener('click', logout);
+
+        // Carregar senhas do localStorage
+        function loadPasswords() {
+            if (!currentUser) return;
+            
+            const userKey = generateUserKey(currentUser.id);
+            const storageKey = `securepass_passwords_${currentUser.id}`;
+            const encryptedData = localStorage.getItem(storageKey);
+            
+            passwords = [];
+            
+            if (encryptedData) {
+                const decryptedPasswords = decryptData(encryptedData, userKey);
+                if (decryptedPasswords && Array.isArray(decryptedPasswords)) {
+                    passwords = decryptedPasswords;
+                }
+            }
+            
+            renderPasswords();
+            updateStats();
+        }
+
+        // Salvar senhas no localStorage
+        function savePasswords() {
+            if (!currentUser) return;
+            
+            const userKey = generateUserKey(currentUser.id);
+            const storageKey = `securepass_passwords_${currentUser.id}`;
+            const encryptedData = encryptData(passwords, userKey);
+            
+            localStorage.setItem(storageKey, encryptedData);
+            localStorage.setItem('securepass_lastsync', new Date().toLocaleString());
+            
+            updateStats();
+        }
+
+        // Navegação entre páginas
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const targetPage = item.dataset.page;
+                
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                pages.forEach(page => page.classList.add('hidden'));
+                document.getElementById(targetPage + 'Page').classList.remove('hidden');
+                
+                startAutoLogoutTimer(); // Reset timer na navegação
+            });
+        });
+
+        // Abrir modal para adicionar senha
+        addPasswordBtn.addEventListener('click', () => {
+            currentEditingId = null;
+            document.querySelector('.modal-title').textContent = 'Adicionar Nova Senha';
+            passwordForm.reset();
+            passwordModal.classList.add('show');
+        });
+
+        // Fechar modal
+        document.querySelector('.close-btn').addEventListener('click', () => {
+            passwordModal.classList.remove('show');
+        });
+
+        document.getElementById('cancelBtn').addEventListener('click', () => {
+            passwordModal.classList.remove('show');
+        });
+
+        // Toggle mostrar/esconder senha no form
+        document.getElementById('togglePassword').addEventListener('click', () => {
+            const passwordInput = document.getElementById('sitePassword');
+            const toggleBtn = document.getElementById('togglePassword');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        });
+
+        // Salvar senha
+        passwordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const passwordData = {
+                id: currentEditingId || Date.now().toString(),
+                siteName: document.getElementById('siteName').value.trim(),
+                email: document.getElementById('siteEmail').value.trim(),
+                password: document.getElementById('sitePassword').value,
+                url: document.getElementById('siteUrl').value.trim(),
+                notes: document.getElementById('siteNotes').value.trim(),
+                createdAt: currentEditingId ? passwords.find(p => p.id === currentEditingId)?.createdAt || Date.now() : Date.now(),
+                updatedAt: Date.now()
+            };
+
+            if (currentEditingId) {
+                // Editar senha existente
+                const index = passwords.findIndex(p => p.id === currentEditingId);
+                if (index !== -1) {
+                    passwords[index] = passwordData;
+                }
+            } else {
+                // Adicionar nova senha
+                passwords.unshift(passwordData);
+            }
+            
+            savePasswords();
+            passwordModal.classList.remove('show');
+            showToast('Senha salva com sucesso! 🎉');
+        });
+
+        // Renderizar cards de senha
+        function renderPasswords(filteredPasswords = null) {
+            const passwordsToRender = filteredPasswords || passwords;
+            passwordGrid.innerHTML = '';
+            
+            if (passwordsToRender.length === 0) {
+                passwordGrid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; color: #666; padding: 60px;">
+                        <h3>${passwords.length === 0 ? '🔐 Nenhuma senha salva ainda' : '🔍 Nenhuma senha encontrada'}</h3>
+                        <p>${passwords.length === 0 ? 'Clique em "Adicionar" para começar a organizar suas senhas' : 'Tente uma busca diferente'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            passwordsToRender.forEach(password => {
+                const card = createPasswordCard(password);
+                passwordGrid.appendChild(card);
+            });
+        }
+
+        // Criar card de senha
+        function createPasswordCard(password) {
+            const card = document.createElement('div');
+            card.className = 'password-card';
+            
+            const createdDate = new Date(password.createdAt).toLocaleDateString();
+            const updatedDate = password.updatedAt !== password.createdAt ? 
+                new Date(password.updatedAt).toLocaleDateString() : null;
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="site-name">${escapeHtml(password.siteName)}</div>
+                    <div class="card-actions">
+                        <button class="action-btn" onclick="editPassword('${password.id}')" title="Editar">✏️</button>
+                        <button class="action-btn" onclick="deletePassword('${password.id}')" title="Excluir">🗑️</button>
+                        <button class="action-btn" onclick="copyPassword('${escapeHtml(password.password)}')" title="Copiar senha">📋</button>
+                        ${password.url ? `<button class="action-btn" onclick="openUrl('${escapeHtml(password.url)}')" title="Abrir site">🌐</button>` : ''}
+                    </div>
+                </div>
+                <div class="card-info">
+                    <div class="info-label">Email/Usuário</div>
+                    <div class="info-value">${escapeHtml(password.email)}</div>
+                </div>
+                <div class="card-info">
+                    <div class="info-label">Senha</div>
+                    <div class="info-value password-value">
+                        <span id="pwd_${password.id}">••••••••</span>
+                        <button onclick="togglePasswordVisibility('${password.id}')" style="margin-left: 10px; background: none; border: none; cursor: pointer;">👁️</button>
+                    </div>
+                </div>
+                ${password.url ? `
+                    <div class="card-info">
+                        <div class="info-label">URL</div>
+                        <div class="info-value">
+                            <a href="${escapeHtml(password.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(password.url.substring(0, 40))}${password.url.length > 40 ? '...' : ''}</a>
+                        </div>
+                    </div>
+                ` : ''}
+                ${password.notes ? `
+                    <div class="card-info">
+                        <div class="info-label">Notas</div>
+                        <div class="info-value">${escapeHtml(password.notes.substring(0, 100))}${password.notes.length > 100 ? '...' : ''}</div>
+                    </div>
+                ` : ''}
+                <div class="card-info" style="border-top: 1px solid #f0f0f0; padding-top: 10px; margin-top: 10px; font-size: 12px; color: #999;">
+                    <div>Criado: ${createdDate}</div>
+                    ${updatedDate ? `<div>Atualizado: ${updatedDate}</div>` : ''}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Funções utilitárias
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, (m) => map[m]);
+        }
+
+        function showToast(message, type = 'success') {
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            
+            if (type === 'warning') {
+                toast.style.background = '#ff4757';
+            } else if (type === 'info') {
+                toast.style.background = '#667eea';
+            }
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Editar senha
+        function editPassword(id) {
+            const password = passwords.find(p => p.id === id);
+            if (!password) return;
+            
+            currentEditingId = id;
+            document.querySelector('.modal-title').textContent = 'Editar Senha';
+            
+            document.getElementById('siteName').value = password.siteName;
+            document.getElementById('siteEmail').value = password.email;
+            document.getElementById('sitePassword').value = password.password;
+            document.getElementById('siteUrl').value = password.url || '';
+            document.getElementById('siteNotes').value = password.notes || '';
+            
+            passwordModal.classList.add('show');
+        }
+
+        // Excluir senha
+        function deletePassword(id) {
+            const password = passwords.find(p => p.id === id);
+            if (!password) return;
+            
+            if (confirm(`Tem certeza que deseja excluir a senha de "${password.siteName}"?`)) {
+                passwords = passwords.filter(p => p.id !== id);
+                savePasswords();
+                showToast('Senha excluída com sucesso! 🗑️');
+            }
+        }
+
+        // Copiar senha
+        function copyPassword(password) {
+            navigator.clipboard.writeText(password).then(() => {
+                showToast('Senha copiada! 📋');
+            }).catch(() => {
+                // Fallback para navegadores mais antigos
+                const textArea = document.createElement('textarea');
+                textArea.value = password;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Senha copiada! 📋');
+            });
+            
+            startAutoLogoutTimer(); // Reset timer
+        }
+
+        // Abrir URL
+        function openUrl(url) {
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        // Alternar visibilidade da senha
+        function togglePasswordVisibility(id) {
+            const passwordSpan = document.getElementById(`pwd_${id}`);
+            const password = passwords.find(p => p.id === id);
+            
+            if (!password) return;
+            
+            if (passwordSpan.textContent === '••••••••') {
+                passwordSpan.textContent = password.password;
+            } else {
+                passwordSpan.textContent = '••••••••';
+            }
+        }
+
+        // Busca de senhas
+        searchBox.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                renderPasswords();
+                return;
+            }
+            
+            const filteredPasswords = passwords.filter(password => 
+                password.siteName.toLowerCase().includes(searchTerm) ||
+                password.email.toLowerCase().includes(searchTerm) ||
+                (password.url && password.url.toLowerCase().includes(searchTerm)) ||
+                (password.notes && password.notes.toLowerCase().includes(searchTerm))
+            );
+            
+            renderPasswords(filteredPasswords);
+        });
+
+        // Gerador de senhas
+        const passwordLength = document.getElementById('passwordLength');
+        const lengthValue = document.getElementById('lengthValue');
+        const generateBtn = document.getElementById('generateBtn');
+        const generatedPassword = document.getElementById('generatedPassword');
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+
+        passwordLength.addEventListener('input', () => {
+            lengthValue.textContent = passwordLength.value;
+        });
+
+        // Avaliar força da senha
+        function evaluatePasswordStrength(password) {
+            let score = 0;
+            
+            // Comprimento
+            if (password.length >= 8) score += 1;
+            if (password.length >= 12) score += 1;
+            if (password.length >= 16) score += 1;
+            
+            // Variedade de caracteres
+            if (/[a-z]/.test(password)) score += 1;
+            if (/[A-Z]/.test(password)) score += 1;
+            if (/[0-9]/.test(password)) score += 1;
+            if (/[^A-Za-z0-9]/.test(password)) score += 1;
+            
+            // Padrões
+            if (!/(.)\1{2,}/.test(password)) score += 1; // Sem repetições
+            if (!/123|abc|qwe/i.test(password)) score += 1; // Sem sequências comuns
+            
+            return score;
+        }
+
+        function updateStrengthIndicator(password) {
+            const score = evaluatePasswordStrength(password);
+            const strengthBar = document.getElementById('strengthBar');
+            const strengthText = document.getElementById('strengthText');
+            
+            strengthBar.className = 'strength-bar';
+            
+            if (score <= 3) {
+                strengthBar.classList.add('strength-weak');
+                strengthText.textContent = '⚠️ Fraca - Use mais caracteres e variedade';
+            } else if (score <= 5) {
+                strengthBar.classList.add('strength-medium');
+                strengthText.textContent = '🔶 Média - Considere mais símbolos';
+            } else if (score <= 7) {
+                strengthBar.classList.add('strength-good');
+                strengthText.textContent = '✅ Boa - Senha segura';
+            } else {
+                strengthBar.classList.add('strength-strong');
+                strengthText.textContent = '🔒 Muito forte - Excelente segurança';
+            }
+        }
+
+        generateBtn.addEventListener('click', () => {
+            const length = parseInt(passwordLength.value);
+            const includeUppercase = document.getElementById('includeUppercase').checked;
+            const includeLowercase = document.getElementById('includeLowercase').checked;
+            const includeNumbers = document.getElementById('includeNumbers').checked;
+            const includeSymbols = document.getElementById('includeSymbols').checked;
+            
+            let charset = '';
+            if (includeUppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            if (includeLowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
+            if (includeNumbers) charset += '0123456789';
+            if (includeSymbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            if (!charset) {
+                showToast('Selecione pelo menos um tipo de caractere! ⚠️', 'warning');
+                return;
+            }
+            
+            let password = '';
+            
+            // Garantir pelo menos um caractere de cada tipo selecionado
+            if (includeUppercase) password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+            if (includeLowercase) password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+            if (includeNumbers) password += '0123456789'[Math.floor(Math.random() * 10)];
+            if (includeSymbols) password += '!@#$%^&*()_+-=[]{}|;:,.<>?'[Math.floor(Math.random() * 32)];
+            
+            // Preencher o resto
+            for (let i = password.length; i < length; i++) {
+                password += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            
+            // Embaralhar a senha
+            password = password.split('').sort(() => Math.random() - 0.5).join('');
+            
+            generatedPassword.value = password;
+            updateStrengthIndicator(password);
+        });
+
+        // Copiar senha gerada
+        document.getElementById('copyGeneratedBtn').addEventListener('click', () => {
+            const password = generatedPassword.value;
+            if (!password) {
+                showToast('Gere uma senha primeiro! 🎲', 'warning');
+                return;
+            }
+            
+            navigator.clipboard.writeText(password).then(() => {
+                showToast('Senha gerada copiada! 📋');
+            });
+        });
+
+        // Usar senha gerada
+        document.getElementById('useGeneratedBtn').addEventListener('click', () => {
+            const password = generatedPassword.value;
+            if (!password) {
+                showToast('Gere uma senha primeiro! 🎲', 'warning');
+                return;
+            }
+            
+            // Abre o modal de adicionar senha
+            addPasswordBtn.click();
+            
+            // Preenche o campo senha
+            setTimeout(() => {
+                document.getElementById('sitePassword').value = password;
+                showToast('Senha inserida no formulário! ✅');
+            }, 100);
+        });
+
+        // Gerar senha no formulário
+        document.getElementById('generateForForm').addEventListener('click', () => {
+            // Usa as mesmas configurações da página de gerador
+            const length = parseInt(document.getElementById('passwordLength').value) || 16;
+            const includeUppercase = document.getElementById('includeUppercase').checked;
+            const includeLowercase = document.getElementById('includeLowercase').checked;
+            const includeNumbers = document.getElementById('includeNumbers').checked;
+            const includeSymbols = document.getElementById('includeSymbols').checked;
+            
+            let charset = '';
+            if (includeUppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            if (includeLowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
+            if (includeNumbers) charset += '0123456789';
+            if (includeSymbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            if (!charset) {
+                charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+            }
+            
+            let password = '';
+            for (let i = 0; i < length; i++) {
+                password += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            
+            document.getElementById('sitePassword').value = password;
+            showToast('Senha segura gerada! 🔐');
+        });
+
+        // Configurações
+        document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+            const theme = document.getElementById('themeSelect').value;
+            const autoLogout = document.getElementById('autoLogout').value;
+            const autoBackup = document.getElementById('autoBackup').checked;
+            
+            localStorage.setItem('securepass_theme', theme);
+            localStorage.setItem('securepass_autologout', autoLogout);
+            localStorage.setItem('securepass_autobackup', autoBackup);
+            
+            // Reiniciar timer com nova configuração
+            startAutoLogoutTimer();
+            
+            showToast('Configurações salvas! ⚙️');
+        });
+
+        // Carregar configurações
+        function loadSettings() {
+            const savedTheme = localStorage.getItem('securepass_theme') || 'light';
+            const savedAutoLogout = localStorage.getItem('securepass_autologout') || '60';
+            const savedAutoBackup = localStorage.getItem('securepass_autobackup') !== 'false';
+            
+            document.getElementById('themeSelect').value = savedTheme;
+            document.getElementById('autoLogout').value = savedAutoLogout;
+            document.getElementById('autoBackup').checked = savedAutoBackup;
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            const totalPasswords = passwords.length;
+            const lastSync = localStorage.getItem('securepass_lastsync') || 'Nunca';
+            
+            // Calcular tamanho aproximado dos dados
+            const dataSize = new Blob([localStorage.getItem(`securepass_passwords_${currentUser?.id}`) || '']).size;
+            const sizeKB = (dataSize / 1024).toFixed(2);
+            
+            document.getElementById('passwordCount').textContent = totalPasswords;
+            document.getElementById('totalPasswords').textContent = totalPasswords;
+            document.getElementById('lastSync').textContent = lastSync;
+            document.getElementById('storageUsed').textContent = `${sizeKB} KB`;
+        }
+
+        // Exportar dados
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if (passwords.length === 0) {
+                showToast('Nenhuma senha para exportar! 📤', 'warning');
+                return;
+            }
+            
+            const exportData = {
+                version: '1.0',
+                exported: new Date().toISOString(),
+                user: currentUser.email,
+                passwords: passwords
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `securepass-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showToast('Backup exportado com sucesso! 📤');
+        });
+
+        // Importar dados
+        document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('importFile').click();
+        });
+
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importData = JSON.parse(event.target.result);
+                    
+                    if (!importData.passwords || !Array.isArray(importData.passwords)) {
+                        throw new Error('Formato de arquivo inválido');
+                    }
+                    
+                    const confirmMsg = `Importar ${importData.passwords.length} senhas?\n\nIsto irá SUBSTITUIR todas as senhas atuais.`;
+                    
+                    if (confirm(confirmMsg)) {
+                        passwords = importData.passwords;
+                        savePasswords();
+                        showToast(`${passwords.length} senhas importadas! 📥`);
+                    }
+                    
+                } catch (error) {
+                    showToast('Erro ao importar arquivo! ❌', 'warning');
+                    console.error('Erro na importação:', error);
+                }
+            };
+            
+            reader.readAsText(file);
+            e.target.value = ''; // Reset input
+        });
+
+        // Limpar todos os dados
+        document.getElementById('clearAllBtn').addEventListener('click', () => {
+            const confirmMsg = 'ATENÇÃO: Isto irá DELETAR TODAS as suas senhas!\n\nEsta ação não pode ser desfeita.\n\nTem certeza?';
+            
+            if (confirm(confirmMsg)) {
+                const doubleConfirm = prompt('Digite "DELETAR TUDO" para confirmar:');
+                
+                if (doubleConfirm === 'DELETAR TUDO') {
+                    passwords = [];
+                    savePasswords();
+                    showToast('Todos os dados foram removidos! 🗑️', 'warning');
+                } else {
+                    showToast('Operação cancelada! 🚫');
+                }
+            }
+        });
+
+        // Fechar modal clicando fora
+        passwordModal.addEventListener('click', (e) => {
+            if (e.target === passwordModal) {
+                passwordModal.classList.remove('show');
+            }
+        });
+
+        // Reset timer em atividade do usuário
+        ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+            document.addEventListener(event, () => {
+                if (currentUser) {
+                    startAutoLogoutTimer();
+                }
+            }, { passive: true });
+        });
+
+        // Inicialização
+        window.addEventListener('load', () => {
+            // Verifica sessão salva
+            if (!checkSavedSession()) {
+                // Inicializa Google Sign-In apenas se necessário
+                if (typeof google !== 'undefined') {
+                    google.accounts.id.initialize({
+                        client_id: "1088181975050-ki1pknaemctiac1gc80s8bt2nu5gub10.apps.googleusercontent.com",
+                        callback: handleCredentialResponse
+                    });
+                }
+            }
+            
+            loadSettings();
+        });
+    </script>
+</body>
+</html>
